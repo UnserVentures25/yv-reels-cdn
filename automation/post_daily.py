@@ -5,10 +5,12 @@ als Instagram Trial Reel, optional als Facebook-Video-Crosspost.
 Zugangsdaten kommen ausschliesslich aus GitHub Actions Secrets (Env-Vars).
 """
 import json, os, sys, time
+from datetime import datetime, timezone
 import requests
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO_ROOT = os.path.dirname(HERE)
+TRIAL_STATE_FILE = os.path.join(REPO_ROOT, "trial_state.json")
 
 GRAPH_BASE = "https://graph.facebook.com/v20.0"
 POLL_INTERVAL_S = 5
@@ -58,6 +60,17 @@ def post_instagram_trial(ig_user_id, token, video_url, caption):
     return r.json()["id"]
 
 
+def record_trial(media_id, reel_nr):
+    trial_state = load_json("trial_state.json") if os.path.exists(TRIAL_STATE_FILE) else {}
+    trial_state[media_id] = {
+        "reel_nr": reel_nr,
+        "posted_at": datetime.now(timezone.utc).isoformat(),
+        "status": "pending",
+        "reach": None,
+    }
+    save_json("trial_state.json", trial_state)
+
+
 def post_facebook_video(page_id, token, video_url, caption):
     data = {
         "file_url": video_url,
@@ -91,6 +104,7 @@ def main():
     print(f"[{reel_nr}] Posting Instagram Trial Reel...")
     media_id = post_instagram_trial(ig_user_id, ig_token, video_url, caption)
     print(f"[{reel_nr}] Instagram OK: media_id={media_id}")
+    record_trial(media_id, reel_nr)
 
     if do_facebook and fb_page_id and fb_token:
         try:
