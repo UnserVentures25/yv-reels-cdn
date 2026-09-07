@@ -26,7 +26,6 @@ GENERIC_TEMPLATES = [
     "Danke für deine Zeit 🙏",
     "Das bedeutet mir was, danke 🤍",
     "Danke, dass du dir das angeschaut hast 🙏",
-    "Gut, dass es ankommt ✨",
     "Schön, das zu lesen 🤍",
     "Danke, dass du dir die Zeit nimmst 🙏",
     "Freut mich sehr, danke dir 🤍",
@@ -140,10 +139,13 @@ def main():
             except requests.HTTPError as e:
                 print(f"Antwort fehlgeschlagen fuer {cid}: {e}")
             replied.add(cid)
+            # Nach jeder Antwort sichern, damit ein Abbruch mitten im Lauf
+            # (z.B. Cancel, Timeout) keine bereits gesendeten Antworten verliert
+            # und beim naechsten Lauf keine Doppel-Antworten entstehen.
+            save_json_list(REPLIED_FILE, sorted(replied))
+            save_json_list(RECENT_FILE, recent)
             time.sleep(2)
 
-    save_json_list(REPLIED_FILE, sorted(replied))
-    save_json_list(RECENT_FILE, recent)
     print(f"Fertig. {new_replies} neue Antworten gepostet.")
 
 
