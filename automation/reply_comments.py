@@ -64,12 +64,18 @@ def save_json_list(path, items):
         json.dump(items, f, ensure_ascii=False, indent=2)
 
 
-def get_recent_media(ig_user_id, token, limit=100):
-    r = requests.get(f"{GRAPH_BASE}/{ig_user_id}/media",
-                      params={"fields": "id,timestamp", "limit": limit, "access_token": token},
-                      timeout=30)
-    r.raise_for_status()
-    return [m["id"] for m in r.json().get("data", [])]
+def get_recent_media(ig_user_id, token):
+    media_ids = []
+    url = f"{GRAPH_BASE}/{ig_user_id}/media"
+    params = {"fields": "id,timestamp", "limit": 100, "access_token": token}
+    while url:
+        r = requests.get(url, params=params, timeout=30)
+        r.raise_for_status()
+        payload = r.json()
+        media_ids.extend(m["id"] for m in payload.get("data", []))
+        url = payload.get("paging", {}).get("next")
+        params = None
+    return media_ids
 
 
 def get_comments(media_id, token):
