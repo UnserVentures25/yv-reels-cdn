@@ -21,14 +21,15 @@ GENERIC_TEMPLATES = [
     "Danke für deinen Kommentar 🙏",
     "Danke dir 🤍",
     "Freut mich, dass es dich erreicht ✨",
-    "Danke fürs Lesen 🙏",
+    "Danke fürs Anschauen 🙏",
     "Schön, dass du hier bist 🤍",
     "Danke für deine Zeit 🙏",
     "Das bedeutet mir was, danke 🤍",
     "Danke, dass du dir das angeschaut hast 🙏",
-    "Schön, das zu lesen 🤍",
+    "Schön, dass du reinschaust 🤍",
     "Danke, dass du dir die Zeit nimmst 🙏",
     "Freut mich sehr, danke dir 🤍",
+    "Danke für dein Kommentar, gerne teilen, wenn's dir was gibt 🤍",
 ]
 
 # Fuer sehr kurze Kommentare (Emoji-only, ein Wort, "top"/"nice"/"🔥" etc.)
