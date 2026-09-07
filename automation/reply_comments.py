@@ -151,7 +151,7 @@ def main():
             # und beim naechsten Lauf keine Doppel-Antworten entstehen.
             save_json_list(REPLIED_FILE, sorted(replied))
             save_json_list(RECENT_FILE, recent)
-            time.sleep(2)
+            time.sleep(10)
 
     print(f"Fertig. {new_replies} neue Antworten gepostet.")
 
