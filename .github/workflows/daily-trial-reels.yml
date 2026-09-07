@@ -2,11 +2,11 @@ name: Daily Trial Reels
 
 on:
   schedule:
-    - cron: "5 7 * * *"
-    - cron: "5 9 * * *"
-    - cron: "5 11 * * *"
-    - cron: "5 14 * * *"
-    - cron: "5 17 * * *"
+    - cron: "33 6 * * *"
+    - cron: "33 9 * * *"
+    - cron: "33 11 * * *"
+    - cron: "33 16 * * *"
+    - cron: "33 18 * * *"
   workflow_dispatch: {}
 
 permissions:
