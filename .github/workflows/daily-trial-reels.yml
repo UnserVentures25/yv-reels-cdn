@@ -1,12 +1,9 @@
 name: Daily Trial Reels
 
 on:
-  schedule:
-    - cron: "33 6 * * *"
-    - cron: "33 9 * * *"
-    - cron: "33 11 * * *"
-    - cron: "33 16 * * *"
-    - cron: "33 18 * * *"
+  # Zeitplan laeuft jetzt extern ueber cron-job.org (GitHubs eigener
+  # schedule-Trigger war unzuverlaessig, ist deshalb entfernt, um
+  # Doppel-Posts zu vermeiden).
   workflow_dispatch: {}
 
 permissions:
