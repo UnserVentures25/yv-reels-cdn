@@ -64,7 +64,7 @@ def save_json_list(path, items):
         json.dump(items, f, ensure_ascii=False, indent=2)
 
 
-def get_recent_media(ig_user_id, token, limit=25):
+def get_recent_media(ig_user_id, token, limit=100):
     r = requests.get(f"{GRAPH_BASE}/{ig_user_id}/media",
                       params={"fields": "id,timestamp", "limit": limit, "access_token": token},
                       timeout=30)
@@ -73,11 +73,17 @@ def get_recent_media(ig_user_id, token, limit=25):
 
 
 def get_comments(media_id, token):
-    r = requests.get(f"{GRAPH_BASE}/{media_id}/comments",
-                      params={"fields": "id,text,username", "access_token": token},
-                      timeout=30)
-    r.raise_for_status()
-    return r.json().get("data", [])
+    comments = []
+    url = f"{GRAPH_BASE}/{media_id}/comments"
+    params = {"fields": "id,text,username", "limit": 50, "access_token": token}
+    while url:
+        r = requests.get(url, params=params, timeout=30)
+        r.raise_for_status()
+        payload = r.json()
+        comments.extend(payload.get("data", []))
+        url = payload.get("paging", {}).get("next")
+        params = None
+    return comments
 
 
 def reply_to_comment(comment_id, token, message):
