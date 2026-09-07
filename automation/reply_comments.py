@@ -1,41 +1,67 @@
 #!/usr/bin/env python3
 """
 Laeuft in GitHub Actions (Cron). Antwortet auf neue Kommentare unter den
-eigenen Reels/Posts mit einer neutralen, freundlichen Antwort.
+eigenen Reels/Posts mit einer neutralen, freundlichen Antwort, passend zur
+Art des Kommentars (Frage / kurz-positiv / generisch).
 Braucht instagram_manage_comments auf dem Token.
 """
-import json, os, time
+import json, os, re, time
 import requests
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO_ROOT = os.path.dirname(HERE)
 REPLIED_FILE = os.path.join(REPO_ROOT, "replied_comments.json")
+RECENT_FILE = os.path.join(REPO_ROOT, "recent_replies.json")
+RECENT_MAX = 8
 
 GRAPH_BASE = "https://graph.facebook.com/v20.0"
 
-# Neutrale, freundliche Antworten, ruhig und erwachsen, keine Ausrufezeichen/Emojis.
-TEMPLATES = [
-    "Danke dir.",
-    "Freut mich, dass es dich erreicht.",
-    "Danke fürs Lesen.",
-    "Schön, dass du hier bist.",
-    "Danke für deine Zeit.",
-    "Das bedeutet mir was, danke.",
-    "Danke, dass du dir das angeschaut hast.",
-    "Gut, dass es ankommt.",
+# Neutrale, freundliche Antworten, ruhig und erwachsen, dezente Emojis.
+GENERIC_TEMPLATES = [
+    "Danke für deinen Kommentar 🙏",
+    "Danke dir 🤍",
+    "Freut mich, dass es dich erreicht ✨",
+    "Danke fürs Lesen 🙏",
+    "Schön, dass du hier bist 🤍",
+    "Danke für deine Zeit 🙏",
+    "Das bedeutet mir was, danke 🤍",
+    "Danke, dass du dir das angeschaut hast 🙏",
+    "Gut, dass es ankommt ✨",
+    "Schön, das zu lesen 🤍",
+    "Danke, dass du dir die Zeit nimmst 🙏",
+    "Freut mich sehr, danke dir 🤍",
+]
+
+# Fuer sehr kurze Kommentare (Emoji-only, ein Wort, "top"/"nice"/"🔥" etc.)
+SHORT_TEMPLATES = [
+    "🙏",
+    "🤍",
+    "✨",
+    "Danke dir 🙏",
+    "🙏🤍",
+    "Danke ✨",
+]
+
+# Fuer Kommentare mit Frage (enthaelt "?")
+QUESTION_TEMPLATES = [
+    "Gute Frage, schau ich mir an 🙏",
+    "Danke fürs Nachfragen, melde mich dazu 🤍",
+    "Guter Punkt, dazu bald mehr ✨",
+    "Danke, gehe ich nach 🙏",
+    "Schaue ich mir genauer an, danke dir 🤍",
 ]
 
 
-def load_replied():
-    if os.path.exists(REPLIED_FILE):
-        with open(REPLIED_FILE, encoding="utf-8") as f:
-            return set(json.load(f))
-    return set()
+def load_json_list(path):
+    if os.path.exists(path):
+        with open(path, encoding="utf-8") as f:
+            return list(json.load(f))
+    return []
 
 
-def save_replied(replied_ids):
-    with open(REPLIED_FILE, "w", encoding="utf-8") as f:
-        json.dump(sorted(replied_ids), f, indent=2)
+def save_json_list(path, items):
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(items, f, ensure_ascii=False, indent=2)
 
 
 def get_recent_media(ig_user_id, token, limit=25):
@@ -61,15 +87,27 @@ def reply_to_comment(comment_id, token, message):
     return r.json().get("id")
 
 
-def pick_template(comment_id):
-    return TEMPLATES[hash(comment_id) % len(TEMPLATES)]
+def classify(text):
+    stripped = re.sub(r"[^\w]", "", text or "", flags=re.UNICODE)
+    if "?" in (text or ""):
+        return QUESTION_TEMPLATES
+    if len(stripped) <= 3:
+        return SHORT_TEMPLATES
+    return GENERIC_TEMPLATES
+
+
+def pick_template(comment_id, text, recent):
+    pool = classify(text)
+    candidates = [t for t in pool if t not in recent] or pool
+    return candidates[hash(comment_id) % len(candidates)]
 
 
 def main():
     ig_user_id = os.environ["IG_USER_ID"]
     token = os.environ["IG_ACCESS_TOKEN"]
 
-    replied = load_replied()
+    replied = set(load_json_list(REPLIED_FILE))
+    recent = load_json_list(RECENT_FILE)
     new_replies = 0
 
     for media_id in get_recent_media(ig_user_id, token):
@@ -86,17 +124,20 @@ def main():
             if c.get("username", "").lower() == "yvesunser":
                 replied.add(cid)
                 continue
-            message = pick_template(cid)
+            message = pick_template(cid, c.get("text", ""), recent)
             try:
                 reply_to_comment(cid, token, message)
                 print(f"Beantwortet: {cid} -> '{message}'")
                 new_replies += 1
+                recent.append(message)
+                recent = recent[-RECENT_MAX:]
             except requests.HTTPError as e:
                 print(f"Antwort fehlgeschlagen fuer {cid}: {e}")
             replied.add(cid)
             time.sleep(2)
 
-    save_replied(replied)
+    save_json_list(REPLIED_FILE, sorted(replied))
+    save_json_list(RECENT_FILE, recent)
     print(f"Fertig. {new_replies} neue Antworten gepostet.")
 
 
