@@ -92,6 +92,28 @@ def get_comments(media_id, token):
     return comments
 
 
+def get_own_username(ig_user_id, token):
+    r = requests.get(f"{GRAPH_BASE}/{ig_user_id}",
+                      params={"fields": "username", "access_token": token}, timeout=30)
+    r.raise_for_status()
+    return r.json().get("username", "")
+
+
+def already_replied(comment_id, ig_user_id, token):
+    """Fragt Instagram direkt, ob unter diesem Kommentar schon eine Antwort vom
+    eigenen Account existiert. Das ist die verlaessliche Quelle, unabhaengig
+    davon, ob replied_comments.json wegen ueberlappender Workflow-Laeufe
+    (z.B. GitHub-Schedule + externer Trigger) noch nicht aktuell ist."""
+    r = requests.get(f"{GRAPH_BASE}/{comment_id}/replies",
+                      params={"fields": "id,from", "limit": 50, "access_token": token}, timeout=30)
+    if r.status_code != 200:
+        return False
+    for reply in r.json().get("data", []):
+        if str(reply.get("from", {}).get("id")) == str(ig_user_id):
+            return True
+    return False
+
+
 def reply_to_comment(comment_id, token, message):
     r = requests.post(f"{GRAPH_BASE}/{comment_id}/replies",
                        data={"message": message, "access_token": token}, timeout=30)
@@ -118,6 +140,8 @@ def main():
     ig_user_id = os.environ["IG_USER_ID"]
     token = os.environ["IG_ACCESS_TOKEN"]
 
+    own_username = get_own_username(ig_user_id, token)
+
     replied = set(load_json_list(REPLIED_FILE))
     recent = load_json_list(RECENT_FILE)
     new_replies = 0
@@ -133,8 +157,15 @@ def main():
             cid = c["id"]
             if cid in replied:
                 continue
-            if c.get("username", "").lower() == "yvesunser":
+            if own_username and c.get("username", "").lower() == own_username.lower():
                 replied.add(cid)
+                continue
+            # Verlaessliche Quelle statt nur der lokalen Datei: erst bei Instagram
+            # nachfragen, ob unter diesem Kommentar schon geantwortet wurde
+            # (schuetzt vor Doppel-Antworten bei ueberlappenden Workflow-Laeufen).
+            if already_replied(cid, ig_user_id, token):
+                replied.add(cid)
+                save_json_list(REPLIED_FILE, sorted(replied))
                 continue
             message = pick_template(cid, c.get("text", ""), recent)
             try:
