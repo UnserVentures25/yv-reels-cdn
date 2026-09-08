@@ -8,7 +8,7 @@ einen ploetzlichen Volumensprung zu triggern.
 Zugangsdaten kommen ausschliesslich aus GitHub Actions Secrets (Env-Vars).
 """
 import json, os, sys, time
-from datetime import date, datetime, timezone
+from datetime import datetime, timezone
 import requests
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -21,25 +21,12 @@ POLL_TIMEOUT_S = 300
 TRIGGERS_PER_DAY = 5
 PAUSE_BETWEEN_POSTS_S = 45
 
-# Hochfahren statt Sprung auf volles Volumen: Tag 1-2 = 10/Tag, Tag 3-4 = 20/Tag,
-# ab Tag 5 = 30/Tag (bei 5 externen Triggern/Tag => Reels pro Trigger 2/4/6).
-RAMP_START = date(2026, 9, 8)
-RAMP_SCHEDULE = [
-    (2, 2),   # Tage 0-1 (Tag 1-2): 2 Reels/Trigger
-    (4, 4),   # Tage 2-3 (Tag 3-4): 4 Reels/Trigger
-]
-RAMP_FINAL = 6  # ab Tag 5: 6 Reels/Trigger
+# Kein Ramp-up mehr: fix 5 Reels pro Trigger (Yves' Entscheidung, 08.09.26).
+REELS_PER_TRIGGER = 5
 
 
 def reels_per_trigger(today=None):
-    today = today or date.today()
-    days_since = (today - RAMP_START).days
-    covered = 0
-    for span_days, per_trigger in RAMP_SCHEDULE:
-        if days_since < covered + span_days:
-            return per_trigger
-        covered += span_days
-    return RAMP_FINAL
+    return REELS_PER_TRIGGER
 
 
 def load_json(name):
