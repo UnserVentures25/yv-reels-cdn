@@ -63,11 +63,15 @@ def post_instagram_trial(ig_user_id, token, video_url, caption):
         "access_token": token,
     }
     r = requests.post(f"{GRAPH_BASE}/{ig_user_id}/media", data=data, timeout=60)
+    if not r.ok:
+        print("Graph-API-Fehler (media):", r.status_code, r.text)
     r.raise_for_status()
     creation_id = r.json()["id"]
     poll_status(creation_id, token)
     r = requests.post(f"{GRAPH_BASE}/{ig_user_id}/media_publish",
                        data={"creation_id": creation_id, "access_token": token}, timeout=60)
+    if not r.ok:
+        print("Graph-API-Fehler (media_publish):", r.status_code, r.text)
     r.raise_for_status()
     return r.json()["id"]
 
