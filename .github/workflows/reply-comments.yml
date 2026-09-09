@@ -5,6 +5,10 @@ on:
     - cron: "30 6,9,12,15,18,21 * * *"
   workflow_dispatch: {}
 
+concurrency:
+  group: reply-comments
+  cancel-in-progress: false
+
 permissions:
   contents: write
 
@@ -25,6 +29,7 @@ jobs:
         run: |
           git config user.email "actions@github.com"
           git config user.name "github-actions"
+          git pull --rebase
           git add replied_comments.json
           git diff --staged --quiet || git commit -m "Update replied comments [skip ci]"
           git push
