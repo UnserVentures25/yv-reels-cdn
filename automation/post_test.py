@@ -60,7 +60,11 @@ def post_carousel(ig_user_id, token, media_urls, caption):
     for url in media_urls:
         video = is_video_url(url)
         data = {"is_carousel_item": "true", "access_token": token}
-        data["video_url" if video else "image_url"] = url
+        if video:
+            data["media_type"] = "VIDEO"
+            data["video_url"] = url
+        else:
+            data["image_url"] = url
         r = requests.post(f"{GRAPH_BASE}/{ig_user_id}/media", data=data, timeout=60)
         check(r)
         cid = r.json()["id"]
