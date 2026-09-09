@@ -1,19 +1,20 @@
 #!/usr/bin/env python3
 """
 Läuft in GitHub Actions (Cron, getriggert extern via cron-job.org, 5x/Tag).
-Postet pro Aufruf mehrere Reels aus state.json als Instagram Trial Reel,
+Postet pro Aufruf mehrere Reels aus state.json als normale Instagram Reels,
 optional als Facebook-Video-Crosspost. Anzahl pro Aufruf faehrt ueber
 RAMP_SCHEDULE automatisch hoch, um Instagrams Spam-Erkennung nicht durch
 einen ploetzlichen Volumensprung zu triggern.
+Kein Trial-Reel-Modus mehr (09.09.26 umgestellt): das Meta-eigene Limit
+fuer gleichzeitig offene Trial Reels wurde erreicht, weil trial_state.json
+nie persistiert wurde und damit nie graduiert werden konnte.
 Zugangsdaten kommen ausschliesslich aus GitHub Actions Secrets (Env-Vars).
 """
 import json, os, sys, time
-from datetime import datetime, timezone
 import requests
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO_ROOT = os.path.dirname(HERE)
-TRIAL_STATE_FILE = os.path.join(REPO_ROOT, "trial_state.json")
 
 GRAPH_BASE = "https://graph.facebook.com/v20.0"
 POLL_INTERVAL_S = 5
@@ -54,12 +55,11 @@ def poll_status(creation_id, token):
     raise TimeoutError(f"Timeout bei {creation_id}")
 
 
-def post_instagram_trial(ig_user_id, token, video_url, caption):
+def post_instagram_reel(ig_user_id, token, video_url, caption):
     data = {
         "media_type": "REELS",
         "video_url": video_url,
         "caption": caption,
-        "trial_params": json.dumps({"graduation_strategy": "MANUAL"}),
         "access_token": token,
     }
     r = requests.post(f"{GRAPH_BASE}/{ig_user_id}/media", data=data, timeout=60)
@@ -76,15 +76,6 @@ def post_instagram_trial(ig_user_id, token, video_url, caption):
     return r.json()["id"]
 
 
-def record_trial(trial_state, media_id, reel_nr):
-    trial_state[media_id] = {
-        "reel_nr": reel_nr,
-        "posted_at": datetime.now(timezone.utc).isoformat(),
-        "status": "pending",
-        "reach": None,
-    }
-
-
 def post_facebook_video(page_id, token, video_url, caption):
     data = {
         "file_url": video_url,
@@ -96,15 +87,13 @@ def post_facebook_video(page_id, token, video_url, caption):
     return r.json().get("id")
 
 
-def post_one(reel_nr, hosted, captions, ig_user_id, ig_token, do_facebook, fb_page_id, fb_token,
-             trial_state):
+def post_one(reel_nr, hosted, captions, ig_user_id, ig_token, do_facebook, fb_page_id, fb_token):
     video_url = hosted[reel_nr]
     caption = captions[reel_nr]
 
-    print(f"[{reel_nr}] Posting Instagram Trial Reel...")
-    media_id = post_instagram_trial(ig_user_id, ig_token, video_url, caption)
+    print(f"[{reel_nr}] Posting Instagram Reel...")
+    media_id = post_instagram_reel(ig_user_id, ig_token, video_url, caption)
     print(f"[{reel_nr}] Instagram OK: media_id={media_id}")
-    record_trial(trial_state, media_id, reel_nr)
 
     if do_facebook and fb_page_id and fb_token:
         try:
@@ -127,7 +116,6 @@ def main():
     state = load_json("state.json")
     hosted = load_json("hosted_urls.json")
     captions = load_json("captions_all.json")
-    trial_state = load_json("trial_state.json") if os.path.exists(TRIAL_STATE_FILE) else {}
 
     posted_this_run = 0
     for i in range(batch_size):
@@ -136,8 +124,7 @@ def main():
             print(f"Kein weiterer Reel vorhanden (naechste Nummer {reel_nr} fehlt in hosted_urls/captions). Stoppe.")
             break
 
-        post_one(reel_nr, hosted, captions, ig_user_id, ig_token, do_facebook, fb_page_id, fb_token,
-                  trial_state)
+        post_one(reel_nr, hosted, captions, ig_user_id, ig_token, do_facebook, fb_page_id, fb_token)
 
         state["posted"].append(reel_nr)
         state["next_reel"] += 1
@@ -147,7 +134,6 @@ def main():
             time.sleep(PAUSE_BETWEEN_POSTS_S)
 
     save_json("state.json", state)
-    save_json("trial_state.json", trial_state)
     print(f"Lauf beendet: {posted_this_run} Reel(s) gepostet. Naechster Reel: {state['next_reel']:02d}")
 
 
