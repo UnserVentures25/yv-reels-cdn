@@ -14,12 +14,19 @@ POLL_INTERVAL_S = 5
 POLL_TIMEOUT_S = 300
 
 
+def check(r):
+    if not r.ok:
+        print("Graph-API-Fehler:", r.status_code, r.text)
+    r.raise_for_status()
+    return r
+
+
 def poll_status(creation_id, token):
     deadline = time.time() + POLL_TIMEOUT_S
     while time.time() < deadline:
         r = requests.get(f"{GRAPH_BASE}/{creation_id}",
                           params={"fields": "status_code", "access_token": token}, timeout=30)
-        r.raise_for_status()
+        check(r)
         status = r.json().get("status_code")
         if status == "FINISHED":
             return
@@ -38,13 +45,13 @@ def post_story(ig_user_id, token, media_url):
     data = {"media_type": "STORIES", "access_token": token}
     data["video_url" if video else "image_url"] = media_url
     r = requests.post(f"{GRAPH_BASE}/{ig_user_id}/media", data=data, timeout=60)
-    r.raise_for_status()
+    check(r)
     creation_id = r.json()["id"]
     if video:
         poll_status(creation_id, token)
     r = requests.post(f"{GRAPH_BASE}/{ig_user_id}/media_publish",
                        data={"creation_id": creation_id, "access_token": token}, timeout=60)
-    r.raise_for_status()
+    check(r)
     return r.json()["id"]
 
 
@@ -55,7 +62,7 @@ def post_carousel(ig_user_id, token, media_urls, caption):
         data = {"is_carousel_item": "true", "access_token": token}
         data["video_url" if video else "image_url"] = url
         r = requests.post(f"{GRAPH_BASE}/{ig_user_id}/media", data=data, timeout=60)
-        r.raise_for_status()
+        check(r)
         cid = r.json()["id"]
         if video:
             poll_status(cid, token)
@@ -68,12 +75,12 @@ def post_carousel(ig_user_id, token, media_urls, caption):
         "children": ",".join(child_ids),
         "access_token": token,
     }, timeout=60)
-    r.raise_for_status()
+    check(r)
     creation_id = r.json()["id"]
     poll_status(creation_id, token)
     r = requests.post(f"{GRAPH_BASE}/{ig_user_id}/media_publish",
                        data={"creation_id": creation_id, "access_token": token}, timeout=60)
-    r.raise_for_status()
+    check(r)
     return r.json()["id"]
 
 
@@ -86,12 +93,12 @@ def post_normal(ig_user_id, token, media_url, caption):
     else:
         data["image_url"] = media_url
     r = requests.post(f"{GRAPH_BASE}/{ig_user_id}/media", data=data, timeout=60)
-    r.raise_for_status()
+    check(r)
     creation_id = r.json()["id"]
     poll_status(creation_id, token)
     r = requests.post(f"{GRAPH_BASE}/{ig_user_id}/media_publish",
                        data={"creation_id": creation_id, "access_token": token}, timeout=60)
-    r.raise_for_status()
+    check(r)
     return r.json()["id"]
 
 
