@@ -1,0 +1,40 @@
+name: Test Manual Post
+
+on:
+  workflow_dispatch:
+    inputs:
+      post_type:
+        description: "story | carousel | normal"
+        required: true
+        type: choice
+        options:
+          - story
+          - carousel
+          - normal
+      media_urls:
+        description: "Komma-getrennte Video/Bild-URLs (bei carousel: 2+)"
+        required: true
+      caption:
+        description: "Caption-Text (bei story nicht verwendet)"
+        required: false
+        default: "Test-Post ueber automation/post_test.py"
+
+permissions:
+  contents: read
+
+jobs:
+  test-post:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install requests
+      - run: python3 automation/post_test.py
+        env:
+          POST_TYPE: ${{ inputs.post_type }}
+          MEDIA_URLS: ${{ inputs.media_urls }}
+          CAPTION: ${{ inputs.caption }}
+          IG_USER_ID: ${{ secrets.IG_USER_ID }}
+          IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
