@@ -24,8 +24,8 @@ POLL_TIMEOUT_S = 300
 TRIGGERS_PER_DAY = 5
 PAUSE_BETWEEN_POSTS_S = 45
 
-# Kein Ramp-up mehr: fix 5 Reels pro Trigger (Yves' Entscheidung, 08.09.26).
-REELS_PER_TRIGGER = 5
+# Auf 1 Reel/Trigger reduziert (Yves' Entscheidung, 09.09.26, wegen Trial-Reel-Limit).
+REELS_PER_TRIGGER = 1
 
 
 def reels_per_trigger(today=None):
