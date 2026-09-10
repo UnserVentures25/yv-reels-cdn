@@ -1,0 +1,25 @@
+name: Graduate Best Trial Reel
+
+on:
+  workflow_dispatch:
+    inputs:
+      media_pairs:
+        description: "reelnr:mediaid,reelnr:mediaid,... (nur die beste wird graduiert)"
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  graduate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install requests
+      - run: python3 automation/graduate_best.py
+        env:
+          MEDIA_PAIRS: ${{ inputs.media_pairs }}
+          IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
