@@ -43,4 +43,5 @@ jobs:
           git config user.name "github-actions"
           git add carousel_state.json best_reel_posted.json
           git diff --staged --quiet || git commit -m "Update scheduled-posting state [skip ci]"
+          git pull --rebase origin main
           git push
