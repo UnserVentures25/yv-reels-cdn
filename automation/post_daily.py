@@ -32,6 +32,21 @@ def reels_per_trigger(today=None):
     return REELS_PER_TRIGGER
 
 
+def next_available(state, hosted, captions):
+    """Liefert die naechste vorhandene Reel-Nummer und ueberspringt Luecken in
+    der Nummerierung (z.B. fehlt #46). Ohne das Ueberspringen bleibt der
+    Zaehler an der ersten Luecke haengen und die Pipeline postet nie wieder.
+    None, wenn hinter der aktuellen Position nichts mehr kommt."""
+    highest = max(int(k) for k in hosted)
+    while state["next_reel"] <= highest:
+        nr = f"{state['next_reel']:02d}"
+        if nr in hosted and nr in captions:
+            return nr
+        print(f"Nummer {nr} fehlt im Pool - uebersprungen.")
+        state["next_reel"] += 1
+    return None
+
+
 def load_json(name):
     with open(os.path.join(REPO_ROOT, name), encoding="utf-8") as f:
         return json.load(f)
@@ -144,9 +159,9 @@ def main():
 
     posted_this_run = 0
     for i in range(batch_size):
-        reel_nr = f"{state['next_reel']:02d}"
-        if reel_nr not in hosted or reel_nr not in captions:
-            print(f"Kein weiterer Reel vorhanden (naechste Nummer {reel_nr} fehlt in hosted_urls/captions). Stoppe.")
+        reel_nr = next_available(state, hosted, captions)
+        if reel_nr is None:
+            print("Pool erschoepft, kein weiterer Reel vorhanden. Stoppe.")
             break
 
         post_one(reel_nr, hosted, captions, ig_user_id, ig_token, do_facebook, fb_page_id, fb_token,
