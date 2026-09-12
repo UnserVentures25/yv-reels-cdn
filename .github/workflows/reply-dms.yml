@@ -1,0 +1,35 @@
+name: Reply to DMs
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch: {}
+
+concurrency:
+  group: reply-dms
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  reply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install requests
+      - run: python3 automation/reply_dms.py
+        env:
+          IG_USER_ID: ${{ secrets.IG_USER_ID }}
+          IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
+      - name: Commit replied-DMs state
+        run: |
+          git config user.email "actions@github.com"
+          git config user.name "github-actions"
+          git add dm_replied.json
+          git diff --staged --quiet || git commit -m "Update replied DMs [skip ci]"
+          git pull --rebase origin main
+          git push
