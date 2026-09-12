@@ -1,9 +1,8 @@
 name: Daily Trial Reels
 
 on:
-  # Zeitplan laeuft jetzt extern ueber cron-job.org (GitHubs eigener
-  # schedule-Trigger war unzuverlaessig, ist deshalb entfernt, um
-  # Doppel-Posts zu vermeiden).
+  schedule:
+    - cron: "0 * * * *"   # 1x pro Stunde, 1 Trial Reel pro Lauf (REELS_PER_TRIGGER in post_daily.py)
   workflow_dispatch: {}
 
 permissions:
@@ -29,6 +28,7 @@ jobs:
         run: |
           git config user.email "actions@github.com"
           git config user.name "github-actions"
+          git pull --rebase
           git add state.json trial_state.json
           git diff --staged --quiet || git commit -m "Update posting state [skip ci]"
           git push
