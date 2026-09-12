@@ -41,12 +41,15 @@ def save_json_set(path, items):
         json.dump(sorted(items), f, ensure_ascii=False, indent=2)
 
 
-def get_conversations(ig_user_id, token, page_id=None):
-    """Conversations haengen bei Meta am Page-Objekt. Wir versuchen erst die
-    IG-User-ID; schlaegt das fehl und FB_PAGE_ID ist gesetzt, fallen wir
-    darauf zurueck."""
+def get_conversations(candidates):
+    """Conversations haengen bei Meta am Page-Objekt und brauchen den
+    Page Access Token. candidates ist eine Liste (owner_id, token);
+    die erste funktionierende Kombination wird zurueckgegeben und fuer
+    alle weiteren Calls dieses Laufs verwendet."""
     last_err = None
-    for owner_id in [ig_user_id] + ([page_id] if page_id else []):
+    for owner_id, token in candidates:
+        if not owner_id or not token:
+            continue
         conversations = []
         url = f"{GRAPH_BASE}/{owner_id}/conversations"
         params = {"platform": "instagram", "fields": "id,updated_time",
@@ -59,16 +62,16 @@ def get_conversations(ig_user_id, token, page_id=None):
                 conversations.extend(payload.get("data", []))
                 url = payload.get("paging", {}).get("next")
                 params = None
-            return conversations
+            return conversations, owner_id, token
         except requests.HTTPError as e:
             print(f"Conversations ueber {owner_id} fehlgeschlagen: {e}")
             last_err = e
     raise last_err
 
 
-def get_last_message(conversation_id, ig_user_id, token):
+def get_last_message(conversation_id, own_ids, token):
     """Liefert die Absender-ID der letzten Nachricht, oder None wenn die
-    letzte Nachricht bereits vom eigenen Account kam."""
+    letzte Nachricht bereits vom eigenen Account/der eigenen Page kam."""
     r = requests.get(
         f"{GRAPH_BASE}/{conversation_id}",
         params={"fields": "messages.limit(1){id,from}", "access_token": token},
@@ -79,14 +82,14 @@ def get_last_message(conversation_id, ig_user_id, token):
     if not messages:
         return None
     sender_id = str(messages[0].get("from", {}).get("id", ""))
-    if sender_id == str(ig_user_id):
+    if sender_id in own_ids:
         return None
     return sender_id
 
 
-def send_message(ig_user_id, token, recipient_id, text):
+def send_message(owner_id, token, recipient_id, text):
     r = requests.post(
-        f"{GRAPH_BASE}/{ig_user_id}/messages",
+        f"{GRAPH_BASE}/{owner_id}/messages",
         data={
             "recipient": json.dumps({"id": recipient_id}),
             "message": json.dumps({"text": text}),
@@ -100,15 +103,24 @@ def send_message(ig_user_id, token, recipient_id, text):
 
 def main():
     ig_user_id = os.environ["IG_USER_ID"]
-    token = os.environ["IG_ACCESS_TOKEN"]
+    ig_token = os.environ["IG_ACCESS_TOKEN"]
     page_id = os.environ.get("FB_PAGE_ID")
+    page_token = os.environ.get("FB_PAGE_ACCESS_TOKEN")
 
     replied = load_json_set(REPLIED_FILE)
     new_replies = 0
 
-    for conv in get_conversations(ig_user_id, token, page_id=page_id):
+    conversations, owner_id, token = get_conversations([
+        (page_id, page_token),
+        (ig_user_id, ig_token),
+        (page_id, ig_token),
+    ])
+    print(f"Conversations geladen ueber {owner_id}: {len(conversations)}")
+    own_ids = {str(ig_user_id)} | ({str(page_id)} if page_id else set())
+
+    for conv in conversations:
         try:
-            sender_id = get_last_message(conv["id"], ig_user_id, token)
+            sender_id = get_last_message(conv["id"], own_ids, token)
         except requests.HTTPError as e:
             print(f"Konnte Conversation {conv['id']} nicht laden: {e}")
             continue
@@ -117,7 +129,7 @@ def main():
             continue
 
         try:
-            send_message(ig_user_id, token, sender_id, MESSAGE_TEXT)
+            send_message(owner_id, token, sender_id, MESSAGE_TEXT)
             print(f"Beantwortet: {sender_id}")
             new_replies += 1
         except requests.HTTPError as e:
