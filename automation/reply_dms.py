@@ -41,19 +41,29 @@ def save_json_set(path, items):
         json.dump(sorted(items), f, ensure_ascii=False, indent=2)
 
 
-def get_conversations(ig_user_id, token):
-    conversations = []
-    url = f"{GRAPH_BASE}/{ig_user_id}/conversations"
-    params = {"platform": "instagram", "fields": "id,updated_time",
-              "limit": 50, "access_token": token}
-    while url:
-        r = requests.get(url, params=params, timeout=30)
-        r.raise_for_status()
-        payload = r.json()
-        conversations.extend(payload.get("data", []))
-        url = payload.get("paging", {}).get("next")
-        params = None
-    return conversations
+def get_conversations(ig_user_id, token, page_id=None):
+    """Conversations haengen bei Meta am Page-Objekt. Wir versuchen erst die
+    IG-User-ID; schlaegt das fehl und FB_PAGE_ID ist gesetzt, fallen wir
+    darauf zurueck."""
+    last_err = None
+    for owner_id in [ig_user_id] + ([page_id] if page_id else []):
+        conversations = []
+        url = f"{GRAPH_BASE}/{owner_id}/conversations"
+        params = {"platform": "instagram", "fields": "id,updated_time",
+                  "limit": 50, "access_token": token}
+        try:
+            while url:
+                r = requests.get(url, params=params, timeout=30)
+                r.raise_for_status()
+                payload = r.json()
+                conversations.extend(payload.get("data", []))
+                url = payload.get("paging", {}).get("next")
+                params = None
+            return conversations
+        except requests.HTTPError as e:
+            print(f"Conversations ueber {owner_id} fehlgeschlagen: {e}")
+            last_err = e
+    raise last_err
 
 
 def get_last_message(conversation_id, ig_user_id, token):
@@ -91,11 +101,12 @@ def send_message(ig_user_id, token, recipient_id, text):
 def main():
     ig_user_id = os.environ["IG_USER_ID"]
     token = os.environ["IG_ACCESS_TOKEN"]
+    page_id = os.environ.get("FB_PAGE_ID")
 
     replied = load_json_set(REPLIED_FILE)
     new_replies = 0
 
-    for conv in get_conversations(ig_user_id, token):
+    for conv in get_conversations(ig_user_id, token, page_id=page_id):
         try:
             sender_id = get_last_message(conv["id"], ig_user_id, token)
         except requests.HTTPError as e:

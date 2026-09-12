@@ -5,12 +5,17 @@ on:
     - cron: "0 * * * *"   # 1x pro Stunde, 1 Trial Reel pro Lauf (REELS_PER_TRIGGER in post_daily.py)
   workflow_dispatch: {}
 
+concurrency:
+  group: daily-trial-reels
+  cancel-in-progress: false
+
 permissions:
   contents: write
 
 jobs:
   post:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5

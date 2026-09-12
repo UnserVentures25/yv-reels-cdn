@@ -15,6 +15,7 @@ permissions:
 jobs:
   reply:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -29,7 +30,7 @@ jobs:
         run: |
           git config user.email "actions@github.com"
           git config user.name "github-actions"
-          git pull --rebase
-          git add replied_comments.json
+          git add replied_comments.json recent_replies.json
           git diff --staged --quiet || git commit -m "Update replied comments [skip ci]"
+          git pull --rebase origin main
           git push

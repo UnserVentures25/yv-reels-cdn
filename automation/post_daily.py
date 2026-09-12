@@ -1,13 +1,10 @@
 #!/usr/bin/env python3
 """
-Läuft in GitHub Actions (Cron, getriggert extern via cron-job.org, 5x/Tag).
-Postet pro Aufruf mehrere Reels aus state.json als Instagram Trial Reel,
-optional als Facebook-Video-Crosspost. Anzahl pro Aufruf faehrt ueber
-RAMP_SCHEDULE automatisch hoch, um Instagrams Spam-Erkennung nicht durch
-einen ploetzlichen Volumensprung zu triggern.
-trial_state.json wird jetzt korrekt committed (09.09.26 gefixt), damit
-"Evaluate Trial Reels" tatsaechlich graduieren kann statt das Meta-Limit
-fuer offene Trial Reels zu reissen.
+Laeuft in GitHub Actions (stuendlicher Cron in daily-trial-reels.yml).
+Postet pro Aufruf 1 Reel aus state.json als Instagram Trial Reel,
+optional als Facebook-Video-Crosspost.
+Ein Zeitfenster-Guard verhindert Doppel-Posts, falls mehrere Trigger
+(z.B. GitHub-Cron + externer Dienst) denselben Stunden-Slot feuern.
 Zugangsdaten kommen ausschliesslich aus GitHub Actions Secrets (Env-Vars).
 """
 import json, os, sys, time
@@ -21,11 +18,14 @@ TRIAL_STATE_FILE = os.path.join(REPO_ROOT, "trial_state.json")
 GRAPH_BASE = "https://graph.facebook.com/v20.0"
 POLL_INTERVAL_S = 5
 POLL_TIMEOUT_S = 300
-TRIGGERS_PER_DAY = 5
 PAUSE_BETWEEN_POSTS_S = 45
 
 # Auf 1 Reel/Trigger reduziert (Yves' Entscheidung, 09.09.26, wegen Trial-Reel-Limit).
 REELS_PER_TRIGGER = 1
+
+# Doppel-Trigger-Guard: liegt der letzte Trial-Post weniger als so viele
+# Minuten zurueck, wird dieser Lauf uebersprungen (statt doppelt zu posten).
+MIN_MINUTES_BETWEEN_POSTS = 45
 
 
 def reels_per_trigger(today=None):
@@ -131,6 +131,16 @@ def main():
     hosted = load_json("hosted_urls.json")
     captions = load_json("captions_all.json")
     trial_state = load_json("trial_state.json") if os.path.exists(TRIAL_STATE_FILE) else {}
+
+    # Doppel-Trigger-Guard (GitHub-Cron + evtl. externer Trigger im selben Slot)
+    last_posted = max((e.get("posted_at") for e in trial_state.values() if e.get("posted_at")),
+                      default=None)
+    if last_posted:
+        age_min = (datetime.now(timezone.utc) - datetime.fromisoformat(last_posted)).total_seconds() / 60
+        if age_min < MIN_MINUTES_BETWEEN_POSTS:
+            print(f"Letzter Trial-Post liegt erst {age_min:.0f} min zurueck "
+                  f"(< {MIN_MINUTES_BETWEEN_POSTS} min) - Doppel-Trigger, ueberspringe Lauf.")
+            return
 
     posted_this_run = 0
     for i in range(batch_size):

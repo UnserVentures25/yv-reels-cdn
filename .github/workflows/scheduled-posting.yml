@@ -10,12 +10,17 @@ on:
         description: "carousel | best_reel (nur fuer manuellen Testlauf)"
         required: false
 
+concurrency:
+  group: scheduled-posting
+  cancel-in-progress: false
+
 permissions:
   contents: write
 
 jobs:
   post:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5

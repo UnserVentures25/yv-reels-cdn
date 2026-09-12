@@ -14,6 +14,11 @@ REPLIED_FILE = os.path.join(REPO_ROOT, "replied_comments.json")
 RECENT_FILE = os.path.join(REPO_ROOT, "recent_replies.json")
 RECENT_MAX = 8
 
+# Nur die juengsten Medien pruefen: neue Kommentare kommen praktisch nur auf
+# aktuelle Posts. Ohne dieses Limit lief der Job ueber ALLE Medien des
+# Accounts (2500+) und haengte sich regelmaessig in GitHubs 6h-Limit.
+MEDIA_LIMIT = 30
+
 GRAPH_BASE = "https://graph.facebook.com/v20.0"
 
 # Neutrale, freundliche Antworten, ruhig und erwachsen, dezente Emojis.
@@ -68,14 +73,14 @@ def get_recent_media(ig_user_id, token):
     media_ids = []
     url = f"{GRAPH_BASE}/{ig_user_id}/media"
     params = {"fields": "id,timestamp", "limit": 100, "access_token": token}
-    while url:
+    while url and len(media_ids) < MEDIA_LIMIT:
         r = requests.get(url, params=params, timeout=30)
         r.raise_for_status()
         payload = r.json()
         media_ids.extend(m["id"] for m in payload.get("data", []))
         url = payload.get("paging", {}).get("next")
         params = None
-    return media_ids
+    return media_ids[:MEDIA_LIMIT]
 
 
 def get_comments(media_id, token):
@@ -175,6 +180,10 @@ def main():
             save_json_list(RECENT_FILE, recent)
             time.sleep(10)
 
+    # Immer speichern, damit beide State-Dateien existieren und der
+    # Commit-Schritt im Workflow sie bedingungslos adden kann.
+    save_json_list(REPLIED_FILE, sorted(replied))
+    save_json_list(RECENT_FILE, recent)
     print(f"Fertig. {new_replies} neue Antworten gepostet.")
 
 

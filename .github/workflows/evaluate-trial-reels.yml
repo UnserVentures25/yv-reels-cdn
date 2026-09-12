@@ -8,9 +8,14 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: evaluate-trial-reels
+  cancel-in-progress: false
+
 jobs:
   evaluate:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -24,6 +29,7 @@ jobs:
         run: |
           git config user.email "actions@github.com"
           git config user.name "github-actions"
-          git add trial_state.json
+          git add trial_state.json best_reel_pool.json
           git diff --staged --quiet || git commit -m "Update trial reel evaluation state [skip ci]"
+          git pull --rebase origin main
           git push
