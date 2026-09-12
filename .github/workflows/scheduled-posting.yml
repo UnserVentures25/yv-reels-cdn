@@ -2,8 +2,10 @@ name: Scheduled Posting
 
 on:
   schedule:
-    - cron: "0 8 * * *"   # 10:00 CEST -> Karussell
-    - cron: "0 12 * * *"  # 14:00 CEST -> bester Reel als Normal-Post
+    # Versetzte Minuten: GitHub verwirft/verzoegert Crons zur vollen Stunde
+    # bei Lastspitzen (12.09. fiel der 8:00-UTC-Slot komplett aus).
+    - cron: "7 8 * * *"   # ~10:07 CEST -> Karussell
+    - cron: "7 12 * * *"  # ~14:07 CEST -> bester Reel als Normal-Post
   workflow_dispatch:
     inputs:
       mode:
@@ -32,7 +34,7 @@ jobs:
         run: |
           if [ -n "${{ inputs.mode }}" ]; then
             echo "mode=${{ inputs.mode }}" >> "$GITHUB_OUTPUT"
-          elif [ "${{ github.event.schedule }}" = "0 8 * * *" ]; then
+          elif [ "${{ github.event.schedule }}" = "7 8 * * *" ]; then
             echo "mode=carousel" >> "$GITHUB_OUTPUT"
           else
             echo "mode=best_reel" >> "$GITHUB_OUTPUT"
