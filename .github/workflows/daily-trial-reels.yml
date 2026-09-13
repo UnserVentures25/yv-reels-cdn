@@ -2,10 +2,12 @@ name: Daily Trial Reels
 
 on:
   schedule:
-    # :11 statt :00 — GitHub verwirft Crons zur vollen Stunde bei Lastspitzen.
-    # Der 45-min-Guard in post_daily.py verhindert Doppel-Posts, falls der
-    # alte externe cron-job.org-Trigger (:00) noch feuert.
-    - cron: "11 * * * *"  # 1x pro Stunde, 1 Trial Reel pro Lauf (REELS_PER_TRIGGER in post_daily.py)
+    # 7 Reels pro Tag, mind. 2 h Abstand: stuendlich loeste Metas Drosselung
+    # aus ("Trial Reel Publish Limit Exceeded", 13.09.26).
+    # Minute :23, damit es nicht mit scheduled-posting (:07) kollidiert und
+    # nicht auf die volle Stunde faellt (GitHub verwirft :00-Crons oft).
+    # UTC -> CEST: 07:23, 09:23, 12:23, 15:23, 17:23, 19:23, 21:23
+    - cron: "23 5,7,10,13,15,17,19 * * *"
   workflow_dispatch: {}
 
 concurrency:
