@@ -6,9 +6,22 @@ Geplantes Posting, 2x/Tag via GitHub-eigenem Cron (kein cron-job.org noetig):
 - MODE=best_reel (14 Uhr CEST): postet den bestperformenden noch nicht so
   geposteten Trial-Reel als NORMALEN Post (kein Trial, kein Limit-Problem,
   da API-Graduierung von MANUAL-Trial-Reels technisch nicht moeglich ist).
+
+Nachhol-Mechanismus: GitHubs Cron-Scheduler verwirft Laeufe bei Lastspitzen
+(13.09. 69 min zu spaet, 14.09. der 08:07-UTC-Slot komplett ausgefallen).
+Deshalb feuert der Workflow pro Modus mehrere Slots; jeder Lauf schreibt nach
+Erfolg das Berliner Datum in den State und spaetere Slots desselben Tages
+brechen sofort ab. FORCE=true (manueller Dispatch) umgeht die Pruefung.
 """
 import json, os, time
+from datetime import datetime
+from zoneinfo import ZoneInfo
+
 import requests
+
+from cdn_upload import warm
+
+TZ = ZoneInfo("Europe/Berlin")
 
 GRAPH_BASE = "https://graph.facebook.com/v20.0"
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -24,6 +37,16 @@ def load_json(name):
 def save_json(name, data):
     with open(os.path.join(REPO_ROOT, name), "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
+
+
+def today_str():
+    return datetime.now(TZ).strftime("%Y-%m-%d")
+
+
+def already_posted_today(state):
+    if os.environ.get("FORCE", "").lower() == "true":
+        return False
+    return state.get("last_post_date") == today_str()
 
 
 def check(r):
@@ -94,22 +117,30 @@ def get_reach(media_id, token):
 def run_carousel(ig_user_id, token):
     pool = load_json("carousel_pool.json")
     state = load_json("carousel_state.json")
+    if already_posted_today(state):
+        print(f"Karussell heute ({state['last_post_date']}) schon gepostet — Nachhol-Slot uebersprungen.")
+        return
     order = state["order"]
     idx = state["next_index"] % len(order)
     k = order[idx]
 
     media_urls = pool["urls"][k]
     caption = pool["captions"][k]
+    warm(media_urls)  # kalter jsDelivr-Cache = Graph-Fehler 9004 beim Fetch
     media_id = post_carousel(ig_user_id, token, media_urls, caption)
     print(f"Carousel {k} OK: media_id={media_id}")
 
     state["next_index"] = (idx + 1) % len(order)
+    state["last_post_date"] = today_str()
     save_json("carousel_state.json", state)
 
 
 def run_best_reel(ig_user_id, token):
     best_pool = load_json("best_reel_pool.json")  # {"09": media_id, "10": media_id, ...}
     posted = load_json("best_reel_posted.json") if os.path.exists(os.path.join(REPO_ROOT, "best_reel_posted.json")) else {"posted": []}
+    if already_posted_today(posted):
+        print(f"Best-Reel heute ({posted['last_post_date']}) schon gepostet — Nachhol-Slot uebersprungen.")
+        return
     hosted = load_json("hosted_urls.json")
     captions = load_json("captions_all.json")
 
@@ -130,10 +161,12 @@ def run_best_reel(ig_user_id, token):
 
     video_url = hosted[best_nr]
     caption = captions[best_nr]
+    warm([video_url])
     media_id = post_normal_reel(ig_user_id, token, video_url, caption)
     print(f"Best-Reel {best_nr} OK: media_id={media_id}")
 
     posted["posted"].append(best_nr)
+    posted["last_post_date"] = today_str()
     save_json("best_reel_posted.json", posted)
 
 

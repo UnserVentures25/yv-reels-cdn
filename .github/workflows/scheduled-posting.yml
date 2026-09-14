@@ -4,8 +4,15 @@ on:
   schedule:
     # Versetzte Minuten: GitHub verwirft/verzoegert Crons zur vollen Stunde
     # bei Lastspitzen (12.09. fiel der 8:00-UTC-Slot komplett aus).
-    - cron: "7 8 * * *"   # ~10:07 CEST -> Karussell
+    # Pro Modus ein Haupt-Slot + zwei Nachhol-Slots. post_scheduled.py prueft
+    # das Berliner Datum im State: war der Tag schon erledigt, bricht der
+    # Nachhol-Lauf sofort ab (kein Doppelpost).
+    - cron: "7 8 * * *"   # ~10:07 CEST -> Karussell (Haupt-Slot)
+    - cron: "37 9 * * *"  # ~11:37 CEST -> Karussell (Nachholung 1)
+    - cron: "7 11 * * *"  # ~13:07 CEST -> Karussell (Nachholung 2)
     - cron: "7 12 * * *"  # ~14:07 CEST -> bester Reel als Normal-Post
+    - cron: "37 13 * * *" # ~15:37 CEST -> Best-Reel (Nachholung 1)
+    - cron: "7 15 * * *"  # ~17:07 CEST -> Best-Reel (Nachholung 2)
   workflow_dispatch:
     inputs:
       mode:
@@ -24,7 +31,15 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
+      # Sparse: Repo ist >1 GB (MP4s/JPGs). Die Workflows brauchen nur Code
+      # und State — Meta laedt die Medien direkt vom CDN.
       - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            .github
+            automation
+            *.json
+          sparse-checkout-cone-mode: false
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
@@ -34,14 +49,17 @@ jobs:
         run: |
           if [ -n "${{ inputs.mode }}" ]; then
             echo "mode=${{ inputs.mode }}" >> "$GITHUB_OUTPUT"
-          elif [ "${{ github.event.schedule }}" = "7 8 * * *" ]; then
-            echo "mode=carousel" >> "$GITHUB_OUTPUT"
           else
-            echo "mode=best_reel" >> "$GITHUB_OUTPUT"
+            case "${{ github.event.schedule }}" in
+              "7 8 * * *"|"37 9 * * *"|"7 11 * * *") echo "mode=carousel" >> "$GITHUB_OUTPUT" ;;
+              *) echo "mode=best_reel" >> "$GITHUB_OUTPUT" ;;
+            esac
           fi
       - run: python3 automation/post_scheduled.py
         env:
           MODE: ${{ steps.mode.outputs.mode }}
+          # Manueller Lauf umgeht die Tagespruefung, Cron-Laeufe nie.
+          FORCE: ${{ github.event_name == 'workflow_dispatch' }}
           IG_USER_ID: ${{ secrets.IG_USER_ID }}
           IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
       - name: Commit updated state

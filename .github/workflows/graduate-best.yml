@@ -14,7 +14,15 @@ jobs:
   graduate:
     runs-on: ubuntu-latest
     steps:
+      # Sparse: Repo ist >1 GB (MP4s/JPGs). Die Workflows brauchen nur Code
+      # und State — Meta laedt die Medien direkt vom CDN.
       - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            .github
+            automation
+            *.json
+          sparse-checkout-cone-mode: false
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
