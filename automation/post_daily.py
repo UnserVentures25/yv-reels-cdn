@@ -25,14 +25,14 @@ REELS_PER_TRIGGER = 1
 
 # Doppel-Trigger-Guard: liegt der letzte Trial-Post ODER -Versuch weniger als
 # so viele Minuten zurueck, wird dieser Lauf uebersprungen.
-# 110 min passt zum 2-h-Raster des Crons. Mit 45 min lief der stuendliche
-# externe Dispatcher am 16.09.26 ungebremst durch.
-MIN_MINUTES_BETWEEN_POSTS = 110
+# Mindestens 2 h Abstand (Yves' Entscheidung, 16.09.26). Mit 45 min lief der
+# stuendliche externe Dispatcher ungebremst durch.
+MIN_MINUTES_BETWEEN_POSTS = 120
 
-# Harte Obergrenze im rollierenden 24-h-Fenster. Der Cron ist auf 7 Slots
-# ausgelegt; ohne Cap kam der Stunden-Dispatcher auf 17 und lief in Metas
-# "Trial Reel Publish Limit Exceeded" (16.09.26).
-MAX_POSTS_PER_24H = 7
+# Harte Obergrenze im rollierenden 24-h-Fenster. 5 statt 7: lieber weniger
+# und dafuer bessere Reels (Yves' Entscheidung, 16.09.26). Ohne Cap kam der
+# Stunden-Dispatcher auf 17 und lief in Metas Trial-Reel-Limit.
+MAX_POSTS_PER_24H = 5
 
 # Metas Fehler-Subcode fuer das Trial-Reel-Limit: erwartete Drosselung, kein Bug.
 TRIAL_LIMIT_SUBCODE = 2207078
