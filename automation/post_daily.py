@@ -8,7 +8,7 @@ Ein Zeitfenster-Guard verhindert Doppel-Posts, falls mehrere Trigger
 Zugangsdaten kommen ausschliesslich aus GitHub Actions Secrets (Env-Vars).
 """
 import json, os, sys, time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import requests
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -23,9 +23,41 @@ PAUSE_BETWEEN_POSTS_S = 45
 # Auf 1 Reel/Trigger reduziert (Yves' Entscheidung, 09.09.26, wegen Trial-Reel-Limit).
 REELS_PER_TRIGGER = 1
 
-# Doppel-Trigger-Guard: liegt der letzte Trial-Post weniger als so viele
-# Minuten zurueck, wird dieser Lauf uebersprungen (statt doppelt zu posten).
-MIN_MINUTES_BETWEEN_POSTS = 45
+# Doppel-Trigger-Guard: liegt der letzte Trial-Post ODER -Versuch weniger als
+# so viele Minuten zurueck, wird dieser Lauf uebersprungen.
+# 110 min passt zum 2-h-Raster des Crons. Mit 45 min lief der stuendliche
+# externe Dispatcher am 16.09.26 ungebremst durch.
+MIN_MINUTES_BETWEEN_POSTS = 110
+
+# Harte Obergrenze im rollierenden 24-h-Fenster. Der Cron ist auf 7 Slots
+# ausgelegt; ohne Cap kam der Stunden-Dispatcher auf 17 und lief in Metas
+# "Trial Reel Publish Limit Exceeded" (16.09.26).
+MAX_POSTS_PER_24H = 7
+
+# Metas Fehler-Subcode fuer das Trial-Reel-Limit: erwartete Drosselung, kein Bug.
+TRIAL_LIMIT_SUBCODE = 2207078
+
+
+class TrialLimitReached(Exception):
+    """Meta lehnt media_publish wegen des Trial-Reel-Limits ab."""
+
+
+def _ist_trial_limit(response):
+    try:
+        err = response.json().get("error", {})
+    except ValueError:
+        return False
+    return err.get("code") == 9 and err.get("error_subcode") == TRIAL_LIMIT_SUBCODE
+
+
+def _zeitstempel(trial_state, *felder):
+    """Alle gesetzten Zeitstempel aus trial_state als datetime-Liste."""
+    out = []
+    for e in trial_state.values():
+        for f in felder:
+            if e.get(f):
+                out.append(datetime.fromisoformat(e[f]))
+    return out
 
 
 def reels_per_trigger(today=None):
@@ -90,6 +122,8 @@ def post_instagram_trial(ig_user_id, token, video_url, caption):
                        data={"creation_id": creation_id, "access_token": token}, timeout=60)
     if not r.ok:
         print("Graph-API-Fehler (media_publish):", r.status_code, r.text)
+        if _ist_trial_limit(r):
+            raise TrialLimitReached(r.text)
     r.raise_for_status()
     return r.json()["id"]
 
@@ -100,6 +134,18 @@ def record_trial(trial_state, media_id, reel_nr):
         "posted_at": datetime.now(timezone.utc).isoformat(),
         "status": "pending",
         "reach": None,
+    }
+
+
+def record_attempt(trial_state, reel_nr, grund):
+    """Fehlversuch protokollieren, damit der Guard ihn sieht. Status != pending,
+    darum ignoriert evaluate_reels.py den Eintrag."""
+    ts = datetime.now(timezone.utc)
+    trial_state[f"failed_{reel_nr}_{int(ts.timestamp())}"] = {
+        "reel_nr": reel_nr,
+        "attempted_at": ts.isoformat(),
+        "status": "failed",
+        "grund": grund,
     }
 
 
@@ -147,14 +193,26 @@ def main():
     captions = load_json("captions_all.json")
     trial_state = load_json("trial_state.json") if os.path.exists(TRIAL_STATE_FILE) else {}
 
-    # Doppel-Trigger-Guard (GitHub-Cron + evtl. externer Trigger im selben Slot)
-    last_posted = max((e.get("posted_at") for e in trial_state.values() if e.get("posted_at")),
-                      default=None)
-    if last_posted:
-        age_min = (datetime.now(timezone.utc) - datetime.fromisoformat(last_posted)).total_seconds() / 60
+    now = datetime.now(timezone.utc)
+
+    # Cap im rollierenden 24-h-Fenster. Bremst auch Trigger, die den
+    # Cron-Rhythmus ignorieren (externer Stunden-Dispatch, 16.09.26).
+    im_fenster = [t for t in _zeitstempel(trial_state, "posted_at") if now - t < timedelta(hours=24)]
+    if len(im_fenster) >= MAX_POSTS_PER_24H:
+        frei_ab = min(im_fenster) + timedelta(hours=24)
+        print(f"{len(im_fenster)} Trial Reels in den letzten 24 h (Cap {MAX_POSTS_PER_24H}) "
+              f"- ueberspringe Lauf. Naechster Slot frei ab "
+              f"{frei_ab.isoformat(timespec='minutes')}.")
+        return
+
+    # Doppel-Trigger-Guard: zaehlt auch Fehlversuche mit. Ohne das legt ein
+    # stuendlicher Trigger nach jedem Fehlschlag sofort wieder los.
+    letzte_aktion = max(_zeitstempel(trial_state, "posted_at", "attempted_at"), default=None)
+    if letzte_aktion:
+        age_min = (now - letzte_aktion).total_seconds() / 60
         if age_min < MIN_MINUTES_BETWEEN_POSTS:
-            print(f"Letzter Trial-Post liegt erst {age_min:.0f} min zurueck "
-                  f"(< {MIN_MINUTES_BETWEEN_POSTS} min) - Doppel-Trigger, ueberspringe Lauf.")
+            print(f"Letzter Trial-Post/-Versuch liegt erst {age_min:.0f} min zurueck "
+                  f"(< {MIN_MINUTES_BETWEEN_POSTS} min) - ueberspringe Lauf.")
             return
 
     posted_this_run = 0
@@ -164,8 +222,19 @@ def main():
             print("Pool erschoepft, kein weiterer Reel vorhanden. Stoppe.")
             break
 
-        post_one(reel_nr, hosted, captions, ig_user_id, ig_token, do_facebook, fb_page_id, fb_token,
-                  trial_state)
+        try:
+            post_one(reel_nr, hosted, captions, ig_user_id, ig_token, do_facebook, fb_page_id,
+                     fb_token, trial_state)
+        except TrialLimitReached:
+            # Erwartete Drosselung, kein Bug: Versuch protokollieren, State
+            # sichern, sauber beenden. next_reel bleibt stehen, der Reel geht
+            # im naechsten freien Slot raus.
+            record_attempt(trial_state, reel_nr, "trial_limit")
+            save_json("state.json", state)
+            save_json("trial_state.json", trial_state)
+            print(f"[{reel_nr}] Metas Trial-Reel-Limit erreicht - Lauf sauber beendet. "
+                  f"Naechster Versuch fruehestens in {MIN_MINUTES_BETWEEN_POSTS} min.")
+            return
 
         state["posted"].append(reel_nr)
         state["next_reel"] += 1
