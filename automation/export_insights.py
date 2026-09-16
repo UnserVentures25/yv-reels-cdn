@@ -66,6 +66,9 @@ def main():
     for media_id, entry in trial.items():
         if media_id in known_ids:
             continue
+        # Fehlversuche aus post_daily.py sind keine media_ids - nicht abfragen.
+        if entry.get("status") == "failed":
+            continue
         item = {"id": media_id, "trial_entry": entry}
         r = requests.get(f"{GRAPH_BASE}/{media_id}",
                          params={"fields": "caption,timestamp,media_type,"
