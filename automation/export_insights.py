@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
 """
-Einmal-Export aller Media-Insights (Feed, Karussells, Reels, Trial Reels)
-als JSON-Artifact. Laeuft nur per workflow_dispatch, committet nichts.
+Export aller Media-Insights (Feed, Karussells, Reels, Trial Reels).
+Schreibt eine datierte JSON ins Repo, damit der Verlauf erhalten bleibt -
+das Actions-Artifact hatte 3 Tage Retention, der Export vom 13.09.26 war
+dadurch schon weg, als er gebraucht wurde (17.09.26).
 """
 import json, os
+from datetime import datetime, timezone
 import requests
 
 GRAPH_BASE = "https://graph.facebook.com/v20.0"
@@ -79,11 +82,17 @@ def main():
         item["insights"] = get_insights(media_id, token)
         trial_media.append(item)
 
-    with open("insights_export.json", "w", encoding="utf-8") as f:
-        json.dump({"profile": profile, "media": media,
-                   "trial_media": trial_media, "trial_state": trial},
-                  f, ensure_ascii=False, indent=2)
-    print(f"Export fertig: {len(media)} Media, {len(trial_media)} Trial-only.")
+    daten = {"exported_at": datetime.now(timezone.utc).isoformat(),
+             "profile": profile, "media": media,
+             "trial_media": trial_media, "trial_state": trial}
+    heute = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    # Root-Ablage, nicht Unterordner: die Workflows checken sparse mit "*.json"
+    # aus, ein Unterordner waere im Arbeitsbaum gar nicht vorhanden.
+    for name in (f"insights_export_{heute}.json", "insights_export.json"):
+        with open(name, "w", encoding="utf-8") as f:
+            json.dump(daten, f, ensure_ascii=False, indent=2)
+    print(f"Export fertig: {len(media)} Media, {len(trial_media)} Trial-only "
+          f"-> insights_export_{heute}.json")
 
 
 if __name__ == "__main__":

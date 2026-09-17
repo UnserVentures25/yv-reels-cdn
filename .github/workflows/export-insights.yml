@@ -1,10 +1,14 @@
 name: Export Insights
 
 on:
+  # Woechentlich montags 06:47 UTC (~08:47 CEST). Versetzte Minute, damit es
+  # nicht mit scheduled-posting (:07) oder daily-trial-reels (:23) kollidiert.
+  schedule:
+    - cron: "47 6 * * 1"
   workflow_dispatch: {}
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   export:
@@ -32,4 +36,12 @@ jobs:
         with:
           name: insights-export
           path: insights_export.json
-          retention-days: 3
+          retention-days: 30
+      - name: Commit insights export
+        run: |
+          git config user.email "actions@github.com"
+          git config user.name "github-actions"
+          git add insights_export*.json
+          git diff --staged --quiet || git commit -m "Insights-Export $(date -u +%Y-%m-%d) [skip ci]"
+          git pull --rebase origin main
+          git push

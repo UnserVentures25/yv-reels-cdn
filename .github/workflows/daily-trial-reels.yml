@@ -2,12 +2,14 @@ name: Daily Trial Reels
 
 on:
   schedule:
-    # 7 Reels pro Tag, mind. 2 h Abstand: stuendlich loeste Metas Drosselung
-    # aus ("Trial Reel Publish Limit Exceeded", 13.09.26).
+    # 1 Reel pro Tag (17.09.26, war 7). Insights-Auswertung vom 17.09.:
+    # Median-Reach 1.407 bei 1-2 Posts/Tag gegen 120 bei 5-9 Posts/Tag.
+    # Zweiter Slot nur als Nachholung, falls der erste ausfaellt -
+    # MAX_POSTS_PER_24H=1 in post_daily.py laesst ihn sonst durchfallen.
     # Minute :23, damit es nicht mit scheduled-posting (:07) kollidiert und
     # nicht auf die volle Stunde faellt (GitHub verwirft :00-Crons oft).
-    # UTC -> CEST: 07:23, 09:23, 12:23, 15:23, 17:23, 19:23, 21:23
-    - cron: "23 5,7,10,13,15,17,19 * * *"
+    # UTC -> CEST: 07:23 (Haupt-Slot), 17:23 (Nachholung)
+    - cron: "23 5,15 * * *"
   workflow_dispatch: {}
 
 concurrency:

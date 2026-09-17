@@ -25,14 +25,16 @@ REELS_PER_TRIGGER = 1
 
 # Doppel-Trigger-Guard: liegt der letzte Trial-Post ODER -Versuch weniger als
 # so viele Minuten zurueck, wird dieser Lauf uebersprungen.
-# Mindestens 2 h Abstand (Yves' Entscheidung, 16.09.26). Mit 45 min lief der
-# stuendliche externe Dispatcher ungebremst durch.
-MIN_MINUTES_BETWEEN_POSTS = 120
+# Mindestens 10 h Abstand (17.09.26, war 2 h). Der externe Stunden-Dispatcher
+# ist weiterhin nicht gefunden - der Guard muss ihn allein abfangen.
+MIN_MINUTES_BETWEEN_POSTS = 600
 
-# Harte Obergrenze im rollierenden 24-h-Fenster. 5 statt 7: lieber weniger
-# und dafuer bessere Reels (Yves' Entscheidung, 16.09.26). Ohne Cap kam der
-# Stunden-Dispatcher auf 17 und lief in Metas Trial-Reel-Limit.
-MAX_POSTS_PER_24H = 5
+# Harte Obergrenze im rollierenden 24-h-Fenster. 1 statt 5 (17.09.26):
+# Die Insights-Auswertung vom 17.09. zeigt Median-Reach 1.407 bei 1-2 Posts/Tag
+# gegen 120 bei 5-9 Posts/Tag - Faktor 9. Zusammen mit den zwei Slots aus
+# scheduled-posting.py bleibt der Account damit bei hoechstens 3 Posts/Tag.
+# Ohne Cap kam der Stunden-Dispatcher auf 17 und lief in Metas Trial-Reel-Limit.
+MAX_POSTS_PER_24H = 1
 
 # Metas Fehler-Subcode fuer das Trial-Reel-Limit: erwartete Drosselung, kein Bug.
 TRIAL_LIMIT_SUBCODE = 2207078
