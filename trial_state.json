@@ -8,98 +8,98 @@
   "18335434345256177": {
     "reel_nr": "39",
     "posted_at": "2026-09-12T07:02:59.000000+00:00",
-    "status": "pending",
-    "reach": null
+    "status": "rejected",
+    "reach": 157
   },
   "17989935966109061": {
     "reel_nr": "40",
     "posted_at": "2026-09-12T08:02:23.582491+00:00",
-    "status": "pending",
-    "reach": null
+    "status": "rejected",
+    "reach": 162
   },
   "18103760750361723": {
     "reel_nr": "41",
     "posted_at": "2026-09-12T09:02:41.466474+00:00",
-    "status": "pending",
-    "reach": null
+    "status": "rejected",
+    "reach": 153
   },
   "18129665944675607": {
     "reel_nr": "42",
     "posted_at": "2026-09-12T10:02:44.436594+00:00",
-    "status": "pending",
-    "reach": null
+    "status": "rejected",
+    "reach": 148
   },
   "17983429715886510": {
     "reel_nr": "43",
     "posted_at": "2026-09-12T11:02:25.097774+00:00",
-    "status": "pending",
-    "reach": null
+    "status": "rejected",
+    "reach": 177
   },
   "18193641160386788": {
     "reel_nr": "44",
     "posted_at": "2026-09-12T12:02:22.543848+00:00",
-    "status": "pending",
-    "reach": null
+    "status": "rejected",
+    "reach": 169
   },
   "18121440493935074": {
     "reel_nr": "45",
     "posted_at": "2026-09-12T12:50:32.600636+00:00",
-    "status": "pending",
-    "reach": null
+    "status": "qualified",
+    "reach": 183
   },
   "17977641969104819": {
     "reel_nr": "47",
     "posted_at": "2026-09-12T16:48:51.327239+00:00",
-    "status": "pending",
-    "reach": null
+    "status": "qualified",
+    "reach": 1533
   },
   "18023979362913394": {
     "reel_nr": "48",
     "posted_at": "2026-09-12T18:02:23.167028+00:00",
-    "status": "pending",
-    "reach": null
+    "status": "rejected",
+    "reach": 163
   },
   "17889756039681441": {
     "reel_nr": "49",
     "posted_at": "2026-09-12T19:02:13.753198+00:00",
-    "status": "pending",
-    "reach": null
+    "status": "qualified",
+    "reach": 244
   },
   "18105344912363313": {
     "reel_nr": "160",
     "posted_at": "2026-09-14T06:47:40.374868+00:00",
-    "status": "pending",
-    "reach": null
+    "status": "qualified",
+    "reach": 193
   },
   "17969023428007013": {
     "reel_nr": "161",
     "posted_at": "2026-09-14T08:01:55.648040+00:00",
-    "status": "pending",
-    "reach": null
+    "status": "qualified",
+    "reach": 2350
   },
   "18125410783871878": {
     "reel_nr": "162",
     "posted_at": "2026-09-14T09:01:46.329685+00:00",
-    "status": "pending",
-    "reach": null
+    "status": "qualified",
+    "reach": 396
   },
   "18123051559854355": {
     "reel_nr": "163",
     "posted_at": "2026-09-14T10:02:26.847087+00:00",
-    "status": "pending",
-    "reach": null
+    "status": "rejected",
+    "reach": 117
   },
   "18072601907723143": {
     "reel_nr": "164",
     "posted_at": "2026-09-14T11:01:33.978792+00:00",
-    "status": "pending",
-    "reach": null
+    "status": "qualified",
+    "reach": 338
   },
   "17895599154395837": {
     "reel_nr": "165",
     "posted_at": "2026-09-14T12:01:37.482682+00:00",
-    "status": "pending",
-    "reach": null
+    "status": "qualified",
+    "reach": 359
   },
   "18622194628003906": {
     "reel_nr": "166",
