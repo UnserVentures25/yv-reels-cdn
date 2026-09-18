@@ -104,26 +104,26 @@
   "18622194628003906": {
     "reel_nr": "166",
     "posted_at": "2026-09-14T14:02:14.694554+00:00",
-    "status": "pending",
-    "reach": null
+    "status": "qualified",
+    "reach": 1623
   },
   "18005877929782311": {
     "reel_nr": "167",
     "posted_at": "2026-09-14T16:01:31.238086+00:00",
-    "status": "pending",
-    "reach": null
+    "status": "qualified",
+    "reach": 624
   },
   "18119078098874033": {
     "reel_nr": "168",
     "posted_at": "2026-09-14T17:01:30.821871+00:00",
-    "status": "pending",
-    "reach": null
+    "status": "qualified",
+    "reach": 1503
   },
   "18096246851423082": {
     "reel_nr": "169",
     "posted_at": "2026-09-14T18:01:26.330771+00:00",
-    "status": "pending",
-    "reach": null
+    "status": "qualified",
+    "reach": 206
   },
   "18109775150173689": {
     "reel_nr": "50",
