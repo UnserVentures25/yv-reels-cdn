@@ -5,7 +5,9 @@ PUBLISH=true gesetzt ist."""
 import json, os, sys, time, requests
 
 ig = os.environ["IG_USER_ID"]
-tok = os.environ["IG_ACCESS_TOKEN"]
+quelle = os.environ.get("TOKEN_SOURCE", "user")
+tok = os.environ["FB_PAGE_ACCESS_TOKEN"] if quelle == "page" else os.environ["IG_ACCESS_TOKEN"]
+print(f"### Token-Quelle: {quelle}")
 url = os.environ["TEST_URL"]
 ver = os.environ.get("API_VERSION", "v23.0")
 do_publish = os.environ.get("PUBLISH", "").lower() == "true"
