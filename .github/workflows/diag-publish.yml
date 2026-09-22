@@ -1,0 +1,43 @@
+name: Diag Publish
+on:
+  workflow_dispatch:
+    inputs:
+      reel:
+        description: "Reel-Nummer aus hosted_urls.json"
+        required: true
+      version:
+        description: "Graph-API-Version (z.B. v23.0)"
+        default: "v23.0"
+      publish:
+        description: "true = veroeffentlicht wirklich einen Post"
+        default: "false"
+jobs:
+  diag:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            automation
+            *.json
+          sparse-checkout-cone-mode: false
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.11"}
+      - run: pip install requests
+      - id: pick
+        run: |
+          python3 -c "
+          import json,os
+          n='${{ inputs.reel }}'
+          print('url='+json.load(open('hosted_urls.json'))[n])
+          c=json.load(open('captions_all.json'))[n].replace('\n',' ')[:1500]
+          print('caption='+c)
+          " >> "$GITHUB_OUTPUT"
+      - env:
+          IG_USER_ID: ${{ secrets.IG_USER_ID }}
+          IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
+          TEST_URL: ${{ steps.pick.outputs.url }}
+          CAPTION: ${{ steps.pick.outputs.caption }}
+          API_VERSION: ${{ inputs.version }}
+          PUBLISH: ${{ inputs.publish }}
+        run: python automation/diag_publish.py
