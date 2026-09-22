@@ -20,7 +20,7 @@ def show(label, path, **params):
     return r
 
 print(f"=== PHASE A (nur lesend), API {ver}")
-show("Account", ig, fields="id,username,account_type,media_count,followers_count")
+show("Account", ig, fields="id,username,media_count,followers_count,profile_picture_url")
 show("Publishing-Limit", f"{ig}/content_publishing_limit",
      fields="config,quota_usage,rate_limit_settings")
 r = requests.get("https://graph.facebook.com/debug_token", timeout=30,
