@@ -60,6 +60,9 @@ for p in r.json().get("data", []):
         print(f"      Page-Token-Typ: {d2.get('type')} valid={d2.get('is_valid')} "
               f"profile_id={d2.get('profile_id')}")
 
+print("--- IG_USER_ID == 17841400064915724 (Screenshot):",
+      "JA" if str(ig) == "17841400064915724" else "NEIN - Secret zeigt auf anderes Konto!")
+
 h = requests.head(url, allow_redirects=True, timeout=30)
 print("--- Video-URL:", h.status_code, h.headers.get("content-type"),
       h.headers.get("content-length"))
