@@ -30,6 +30,23 @@ print("--- Token:", {k: d.get(k) for k in
       ("is_valid", "type", "app_id", "expires_at", "profile_id")})
 print("--- Scopes:", d.get("scopes"))
 
+r = requests.get(f"{G}/me/accounts", timeout=30, params={
+    "fields": "id,name,access_token,instagram_business_account{id,username}",
+    "access_token": tok})
+print("--- /me/accounts:", r.status_code)
+for p in r.json().get("data", []):
+    igb = p.get("instagram_business_account") or {}
+    pt = p.get("access_token")
+    print(f"    Seite {p.get('id')} '{p.get('name')}' "
+          f"IG={igb.get('id')} ({igb.get('username')}) "
+          f"passt={'JA' if str(igb.get('id')) == str(ig) else 'nein'} "
+          f"Page-Token={'vorhanden' if pt else 'FEHLT'}")
+    if pt:
+        d2 = requests.get("https://graph.facebook.com/debug_token", timeout=30,
+                          params={"input_token": pt, "access_token": tok}).json().get("data", {})
+        print(f"      Page-Token-Typ: {d2.get('type')} valid={d2.get('is_valid')} "
+              f"profile_id={d2.get('profile_id')}")
+
 h = requests.head(url, allow_redirects=True, timeout=30)
 print("--- Video-URL:", h.status_code, h.headers.get("content-type"),
       h.headers.get("content-length"))
