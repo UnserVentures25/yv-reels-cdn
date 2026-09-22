@@ -29,13 +29,22 @@ d = r.json().get("data", {})
 print("--- Token:", {k: d.get(k) for k in
       ("is_valid", "type", "app_id", "expires_at", "profile_id")})
 print("--- Scopes:", d.get("scopes"))
+for gs in d.get("granular_scopes", []):
+    if "instagram" in gs.get("scope", ""):
+        tids = gs.get("target_ids")
+        print(f"--- granular {gs['scope']}: targets={tids} "
+              f"enthaelt_IG={'JA' if tids and str(ig) in [str(t) for t in tids] else 'nein/alle'}")
 
 r = requests.get(f"{G}/me/accounts", timeout=30, params={
-    "fields": "id,name,access_token,instagram_business_account{id,username}",
+    "fields": "id,name,access_token,instagram_business_account{id,username},"
+              "connected_instagram_account{id,username}",
     "access_token": tok})
 print("--- /me/accounts:", r.status_code)
 for p in r.json().get("data", []):
     igb = p.get("instagram_business_account") or {}
+    con = p.get("connected_instagram_account") or {}
+    print(f"    connected_instagram_account: {con.get('id')} ({con.get('username')}) "
+          f"passt={'JA' if str(con.get('id')) == str(ig) else 'nein'}")
     pt = p.get("access_token")
     print(f"    Seite {p.get('id')} '{p.get('name')}' "
           f"IG={igb.get('id')} ({igb.get('username')}) "
