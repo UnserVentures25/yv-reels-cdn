@@ -230,14 +230,14 @@
   "18113206148048809": {
     "reel_nr": "67",
     "posted_at": "2026-09-17T19:08:33.541601+00:00",
-    "status": "pending",
-    "reach": null
+    "status": "rejected",
+    "reach": 0
   },
   "17915487693446727": {
     "reel_nr": "68",
     "posted_at": "2026-09-19T09:38:12.429124+00:00",
-    "status": "pending",
-    "reach": null
+    "status": "rejected",
+    "reach": 0
   },
   "18109862531232286": {
     "reel_nr": "69",
