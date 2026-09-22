@@ -7,7 +7,7 @@ Ein Zeitfenster-Guard verhindert Doppel-Posts, falls mehrere Trigger
 (z.B. GitHub-Cron + externer Dienst) denselben Stunden-Slot feuern.
 Zugangsdaten kommen ausschliesslich aus GitHub Actions Secrets (Env-Vars).
 """
-import json, os, sys, time
+import json, os, random, sys, time
 from datetime import datetime, timedelta, timezone
 import requests
 
@@ -67,18 +67,18 @@ def reels_per_trigger(today=None):
 
 
 def next_available(state, hosted, captions):
-    """Liefert die naechste vorhandene Reel-Nummer und ueberspringt Luecken in
-    der Nummerierung (z.B. fehlt #46). Ohne das Ueberspringen bleibt der
-    Zaehler an der ersten Luecke haengen und die Pipeline postet nie wieder.
-    None, wenn hinter der aktuellen Position nichts mehr kommt."""
-    highest = max(int(k) for k in hosted)
-    while state["next_reel"] <= highest:
-        nr = f"{state['next_reel']:02d}"
-        if nr in hosted and nr in captions:
-            return nr
-        print(f"Nummer {nr} fehlt im Pool - uebersprungen.")
-        state["next_reel"] += 1
-    return None
+    """Waehlt zufaellig einen noch nicht geposteten Reel aus dem Pool.
+    Zufall statt Reihenfolge, damit das Profil nicht thematisch blockweise
+    aussieht und aeltere Reels dieselbe Chance haben wie neue.
+    None, wenn alle Reels durch sind."""
+    posted = set(state.get("posted", []))
+    kandidaten = sorted(nr for nr in hosted if nr in captions and nr not in posted)
+    if not kandidaten:
+        print("Alle Reels aus dem Pool sind gepostet.")
+        return None
+    nr = random.choice(kandidaten)
+    print(f"Zufallsauswahl: Reel {nr} aus {len(kandidaten)} verfuegbaren.")
+    return nr
 
 
 def load_json(name):
@@ -239,7 +239,6 @@ def main():
             return
 
         state["posted"].append(reel_nr)
-        state["next_reel"] += 1
         posted_this_run += 1
 
         if i < batch_size - 1:
@@ -247,7 +246,7 @@ def main():
 
     save_json("state.json", state)
     save_json("trial_state.json", trial_state)
-    print(f"Lauf beendet: {posted_this_run} Reel(s) gepostet. Naechster Reel: {state['next_reel']:02d}")
+    print(f"Lauf beendet: {posted_this_run} Reel(s) gepostet. {len(state.get('posted', []))} insgesamt durch.")
 
 
 if __name__ == "__main__":
