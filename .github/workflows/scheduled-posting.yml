@@ -4,19 +4,16 @@ on:
   schedule:
     # Versetzte Minuten: GitHub verwirft/verzoegert Crons zur vollen Stunde
     # bei Lastspitzen (12.09. fiel der 8:00-UTC-Slot komplett aus).
-    # Pro Modus ein Haupt-Slot + zwei Nachhol-Slots. post_scheduled.py prueft
+    # Ein Haupt-Slot + zwei Nachhol-Slots. post_scheduled.py prueft
     # das Berliner Datum im State: war der Tag schon erledigt, bricht der
     # Nachhol-Lauf sofort ab (kein Doppelpost).
     - cron: "7 8 * * *"   # ~10:07 CEST -> Karussell (Haupt-Slot)
     - cron: "37 9 * * *"  # ~11:37 CEST -> Karussell (Nachholung 1)
     - cron: "7 11 * * *"  # ~13:07 CEST -> Karussell (Nachholung 2)
-    - cron: "7 12 * * *"  # ~14:07 CEST -> bester Reel als Normal-Post
-    - cron: "37 13 * * *" # ~15:37 CEST -> Best-Reel (Nachholung 1)
-    - cron: "7 15 * * *"  # ~17:07 CEST -> Best-Reel (Nachholung 2)
   workflow_dispatch:
     inputs:
       mode:
-        description: "carousel | best_reel (nur fuer manuellen Testlauf)"
+        description: "carousel | best_reel (best_reel nur manuell, Cron abgeschaltet 22.09.26)"
         required: false
 
 concurrency:
@@ -50,10 +47,7 @@ jobs:
           if [ -n "${{ inputs.mode }}" ]; then
             echo "mode=${{ inputs.mode }}" >> "$GITHUB_OUTPUT"
           else
-            case "${{ github.event.schedule }}" in
-              "7 8 * * *"|"37 9 * * *"|"7 11 * * *") echo "mode=carousel" >> "$GITHUB_OUTPUT" ;;
-              *) echo "mode=best_reel" >> "$GITHUB_OUTPUT" ;;
-            esac
+            echo "mode=carousel" >> "$GITHUB_OUTPUT"
           fi
       - run: python3 automation/post_scheduled.py
         env:
