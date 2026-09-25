@@ -244,5 +244,11 @@
     "posted_at": "2026-09-20T09:54:15.694019+00:00",
     "status": "rejected",
     "reach": 0
+  },
+  "failed_139_1790364140": {
+    "reel_nr": "139",
+    "attempted_at": "2026-09-25T19:22:20.704499+00:00",
+    "status": "failed",
+    "grund": "meta_ausfall_2207085"
   }
 }
