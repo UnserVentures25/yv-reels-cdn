@@ -39,9 +39,20 @@ MAX_POSTS_PER_24H = 1
 # Metas Fehler-Subcode fuer das Trial-Reel-Limit: erwartete Drosselung, kein Bug.
 TRIAL_LIMIT_SUBCODE = 2207078
 
+# Metas Ausfall der Reels-Publish-API, Beginn 21.09.26. Container erreicht
+# FINISHED, media_publish wird abgelehnt. Nicht unsere Konfiguration, belegt in
+# docs/qa-reports/release-assets-2026-09-22.md. Der Lauf beendet sich deshalb
+# sauber statt rot: ein taeglicher Fehlalarm bringt niemandem etwas. Sobald
+# Meta fixt, geht der Reel einfach raus.
+AUSFALL_SUBCODE = 2207085
+
 
 class TrialLimitReached(Exception):
     """Meta lehnt media_publish wegen des Trial-Reel-Limits ab."""
+
+
+class ReelsAusfall(Exception):
+    """Meta lehnt media_publish mit dem generischen Ausfall-Subcode ab."""
 
 
 def _ist_trial_limit(response):
@@ -50,6 +61,14 @@ def _ist_trial_limit(response):
     except ValueError:
         return False
     return err.get("code") == 9 and err.get("error_subcode") == TRIAL_LIMIT_SUBCODE
+
+
+def _ist_ausfall(response):
+    try:
+        err = response.json().get("error", {})
+    except ValueError:
+        return False
+    return err.get("error_subcode") == AUSFALL_SUBCODE
 
 
 def _zeitstempel(trial_state, *felder):
@@ -126,6 +145,8 @@ def post_instagram_trial(ig_user_id, token, video_url, caption):
         print("Graph-API-Fehler (media_publish):", r.status_code, r.text)
         if _ist_trial_limit(r):
             raise TrialLimitReached(r.text)
+        if _ist_ausfall(r):
+            raise ReelsAusfall(r.text)
     r.raise_for_status()
     return r.json()["id"]
 
@@ -227,6 +248,14 @@ def main():
         try:
             post_one(reel_nr, hosted, captions, ig_user_id, ig_token, do_facebook, fb_page_id,
                      fb_token, trial_state)
+        except ReelsAusfall:
+            record_attempt(trial_state, reel_nr, "meta_ausfall_2207085")
+            save_json("state.json", state)
+            save_json("trial_state.json", trial_state)
+            print(f"[{reel_nr}] Metas Reels-Publish-Ausfall (2207085) haelt an. "
+                  f"Reel bleibt im Pool, Lauf sauber beendet.")
+            return
+
         except TrialLimitReached:
             # Erwartete Drosselung, kein Bug: Versuch protokollieren, State
             # sichern, sauber beenden. next_reel bleibt stehen, der Reel geht
