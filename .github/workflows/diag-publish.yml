@@ -14,6 +14,9 @@ on:
       publish:
         description: "true = veroeffentlicht wirklich einen Post"
         default: "false"
+      upload:
+        description: "url = Meta holt per video_url | resumable = Datei direkt an rupload"
+        default: "url"
 jobs:
   diag:
     runs-on: ubuntu-latest
@@ -45,4 +48,5 @@ jobs:
           CAPTION: ${{ steps.pick.outputs.caption }}
           API_VERSION: ${{ inputs.version }}
           PUBLISH: ${{ inputs.publish }}
+          UPLOAD: ${{ inputs.upload }}
         run: python automation/diag_publish.py
