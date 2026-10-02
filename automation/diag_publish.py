@@ -84,8 +84,13 @@ if upload == "resumable":
     r.raise_for_status()
     cid, uri = r.json()["id"], r.json()["uri"]
     r = requests.post(uri, timeout=300, data=video, headers={
-        "Authorization": f"OAuth {tok}", "offset": "0", "file_size": str(len(video))})
-    print("POST rupload:", r.status_code, r.text[:400])
+        "Authorization": f"OAuth {tok}", "offset": "0", "file_size": str(len(video)),
+        "Content-Type": "application/octet-stream"})
+    print("POST rupload (binaer):", r.status_code, r.text[:400])
+    if not r.ok:
+        r = requests.post(uri, timeout=300, headers={
+            "Authorization": f"OAuth {tok}", "file_url": url})
+        print("POST rupload (file_url):", r.status_code, r.text[:400])
     r.raise_for_status()
 else:
     r = requests.post(f"{G}/{ig}/media", timeout=60, data={
