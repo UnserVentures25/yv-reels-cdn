@@ -71,13 +71,29 @@ if not do_publish:
     print("=== PHASE B uebersprungen (PUBLISH != true)")
     sys.exit(0)
 
-print(f"=== PHASE B: Container + Publish mit {ver}")
-r = requests.post(f"{G}/{ig}/media", timeout=60, data={
-    "media_type": "REELS", "video_url": url,
-    "caption": os.environ.get("CAPTION", "Test"), "access_token": tok})
-print("POST /media:", r.status_code, r.text[:400])
-r.raise_for_status()
-cid = r.json()["id"]
+upload = os.environ.get("UPLOAD", "url")
+print(f"=== PHASE B: Container + Publish mit {ver}, Upload: {upload}")
+caption = os.environ.get("CAPTION", "Test")
+if upload == "resumable":
+    video = requests.get(url, timeout=120).content
+    print("Video geladen:", len(video), "Bytes")
+    r = requests.post(f"{G}/{ig}/media", timeout=60, data={
+        "media_type": "REELS", "upload_type": "resumable",
+        "caption": caption, "access_token": tok})
+    print("POST /media (resumable):", r.status_code, r.text[:400])
+    r.raise_for_status()
+    cid, uri = r.json()["id"], r.json()["uri"]
+    r = requests.post(uri, timeout=300, data=video, headers={
+        "Authorization": f"OAuth {tok}", "offset": "0", "file_size": str(len(video))})
+    print("POST rupload:", r.status_code, r.text[:400])
+    r.raise_for_status()
+else:
+    r = requests.post(f"{G}/{ig}/media", timeout=60, data={
+        "media_type": "REELS", "video_url": url,
+        "caption": caption, "access_token": tok})
+    print("POST /media:", r.status_code, r.text[:400])
+    r.raise_for_status()
+    cid = r.json()["id"]
 
 for _ in range(60):
     s = requests.get(f"{G}/{cid}", timeout=30,
