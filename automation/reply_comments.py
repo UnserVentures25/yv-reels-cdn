@@ -21,39 +21,25 @@ MEDIA_LIMIT = 30
 
 GRAPH_BASE = "https://graph.facebook.com/v20.0"
 
-# Neutrale, freundliche Antworten, ruhig und erwachsen, dezente Emojis.
+# Nur Saetze, die unter JEDEM Kommentar passen (auch Kritik, Fragen, Spam).
+# Nichts, was Inhalt unterstellt ("erreicht dich", "angeschaut") oder etwas
+# verspricht ("melde mich dazu"), weil der Bot den Kommentar nicht versteht.
 GENERIC_TEMPLATES = [
+    "Danke für deinen Kommentar 🤍",
     "Danke für deinen Kommentar 🙏",
+    "Danke, dass du kommentiert hast 🤍",
+    "Danke fürs Kommentieren 🙏",
+    "Danke dir für deinen Kommentar 🤍",
     "Danke dir 🤍",
-    "Freut mich, dass es dich erreicht ✨",
-    "Danke fürs Anschauen 🙏",
-    "Schön, dass du hier bist 🤍",
-    "Danke für deine Zeit 🙏",
-    "Das bedeutet mir was, danke 🤍",
-    "Danke, dass du dir das angeschaut hast 🙏",
-    "Schön, dass du reinschaust 🤍",
-    "Danke, dass du dir die Zeit nimmst 🙏",
-    "Freut mich sehr, danke dir 🤍",
-    "Danke für dein Kommentar, gerne teilen, wenn's dir was gibt 🤍",
 ]
 
 # Fuer sehr kurze Kommentare (Emoji-only, ein Wort, "top"/"nice"/"🔥" etc.)
 SHORT_TEMPLATES = [
-    "🙏",
     "🤍",
-    "✨",
-    "Danke dir 🙏",
+    "🙏",
     "🙏🤍",
-    "Danke ✨",
-]
-
-# Fuer Kommentare mit Frage (enthaelt "?")
-QUESTION_TEMPLATES = [
-    "Gute Frage, schau ich mir an 🙏",
-    "Danke fürs Nachfragen, melde mich dazu 🤍",
-    "Guter Punkt, dazu bald mehr ✨",
-    "Danke, gehe ich nach 🙏",
-    "Schaue ich mir genauer an, danke dir 🤍",
+    "Danke dir 🤍",
+    "Danke 🙏",
 ]
 
 
@@ -121,8 +107,6 @@ def reply_to_comment(comment_id, token, message):
 
 def classify(text):
     stripped = re.sub(r"[^\w]", "", text or "", flags=re.UNICODE)
-    if "?" in (text or ""):
-        return QUESTION_TEMPLATES
     if len(stripped) <= 3:
         return SHORT_TEMPLATES
     return GENERIC_TEMPLATES
