@@ -90,6 +90,18 @@ def post_carousel(ig_user_id, token, media_urls, caption):
     return r.json()["id"]
 
 
+def post_image(ig_user_id, token, image_url, caption):
+    r = requests.post(f"{GRAPH_BASE}/{ig_user_id}/media",
+                       data={"image_url": image_url, "caption": caption, "access_token": token}, timeout=60)
+    check(r)
+    creation_id = r.json()["id"]
+    poll_status(creation_id, token)
+    r = requests.post(f"{GRAPH_BASE}/{ig_user_id}/media_publish",
+                       data={"creation_id": creation_id, "access_token": token}, timeout=60)
+    check(r)
+    return r.json()["id"]
+
+
 def post_normal_reel(ig_user_id, token, video_url, caption):
     data = {"media_type": "REELS", "video_url": video_url, "caption": caption, "access_token": token}
     r = requests.post(f"{GRAPH_BASE}/{ig_user_id}/media", data=data, timeout=60)
@@ -121,16 +133,24 @@ def run_carousel(ig_user_id, token):
         print(f"Karussell heute ({state['last_post_date']}) schon gepostet — Nachhol-Slot uebersprungen.")
         return
     order = state["order"]
-    idx = state["next_index"] % len(order)
+    idx = state["next_index"]
+    # Kein Rundlauf mehr: am 20.10.26 haette die Rotation alte Karussells
+    # erneut gepostet. Ist die Liste durch, wird nichts gepostet.
+    if idx >= len(order):
+        print("Reihenfolge abgearbeitet, nichts zu posten. Neue Posts in carousel_state.json eintragen.")
+        return
     k = order[idx]
 
     media_urls = pool["urls"][k]
     caption = pool["captions"][k]
     warm(media_urls)  # kalter jsDelivr-Cache = Graph-Fehler 9004 beim Fetch
-    media_id = post_carousel(ig_user_id, token, media_urls, caption)
-    print(f"Carousel {k} OK: media_id={media_id}")
+    if len(media_urls) == 1:
+        media_id = post_image(ig_user_id, token, media_urls[0], caption)
+    else:
+        media_id = post_carousel(ig_user_id, token, media_urls, caption)
+    print(f"Post {k} OK: media_id={media_id}")
 
-    state["next_index"] = (idx + 1) % len(order)
+    state["next_index"] = idx + 1
     state["last_post_date"] = today_str()
     save_json("carousel_state.json", state)
 
