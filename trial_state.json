@@ -418,5 +418,11 @@
     "attempted_at": "2026-10-26T11:18:36.829082+00:00",
     "status": "failed",
     "grund": "meta_ausfall_2207085"
+  },
+  "failed_198_1793097769": {
+    "reel_nr": "198",
+    "attempted_at": "2026-10-27T10:42:49.516434+00:00",
+    "status": "failed",
+    "grund": "meta_ausfall_2207085"
   }
 }
