@@ -478,5 +478,11 @@
     "attempted_at": "2026-11-05T13:20:30.057339+00:00",
     "status": "failed",
     "grund": "meta_ausfall_2207085"
+  },
+  "failed_77_1793998643": {
+    "reel_nr": "77",
+    "attempted_at": "2026-11-06T20:57:23.065159+00:00",
+    "status": "failed",
+    "grund": "meta_ausfall_2207085"
   }
 }
